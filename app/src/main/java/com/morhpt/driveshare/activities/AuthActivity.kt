@@ -25,6 +25,10 @@ import com.transitionseverywhere.TransitionManager
 import com.transitionseverywhere.TransitionSet
 import kotlinx.coroutines.experimental.async
 import kotlinx.coroutines.experimental.delay
+import android.util.Patterns
+import android.text.TextUtils
+import android.widget.EditText
+import com.morhpt.driveshare.help.isValidEmail
 
 
 class AuthActivity : _Activity() {
@@ -34,6 +38,9 @@ class AuthActivity : _Activity() {
 
     private lateinit var emailInput: TextInputLayout
     private lateinit var passwordInput: TextInputLayout
+
+    private lateinit var email: EditText
+    private lateinit var password: EditText
 
     @SuppressLint("ResourceType")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -52,7 +59,8 @@ class AuthActivity : _Activity() {
                 relativeLayout {
                     verticalLayout {
                         emailInput = themedTextInputLayout(theme = R.style.TextLabel) {
-                            editText {
+
+                            email = editText {
                                 hint = "E-Mail"
                                 singleLine = true
                                 inputType = InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS
@@ -63,7 +71,7 @@ class AuthActivity : _Activity() {
                             rightMargin = dip(16)
                         }
                         passwordInput = themedTextInputLayout(theme = R.style.TextLabel) {
-                            editText {
+                            password = editText {
                                 hint = "Password"
                                 singleLine = true
                                 inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
@@ -90,20 +98,37 @@ class AuthActivity : _Activity() {
                         width = matchParent
                         centerHorizontally()
                         centerVertically()
-                    }
+                    }.applyRecursively { view -> when(view){
+                        is TextInputLayout -> view
+                    } }
                     relativeLayout {
-                        airBnb {
-                            setAnimation("loading.json")
-                            loop(true)
-                            playAnimation()
-                        }.lparams {
-                            bottomMargin = dip(16)
-                            alignParentBottom()
-                        }
+//                        airBnb {
+//                            setAnimation("loading.json")
+//                            loop(true)
+//                            playAnimation()
+//                        }.lparams {
+//                            bottomMargin = dip(16)
+//                            alignParentBottom()
+//                        }
                         val loginButton = relativeLayout {
                             id = 11
                             background = resources.getDrawable(R.drawable.round_button)
                             val loginBtn = this
+
+                            val progress = progressBar { visibility = View.GONE }.lparams {
+                                margin = dip(5)
+                            }
+                            val loginText = textView("Login"){
+                                textColor = resources.getColor(R.color.light_blue)
+                            }.lparams {
+                                topMargin = dip(5)
+                                bottomMargin = dip(5)
+                                leftMargin = dip(32)
+                                rightMargin = dip(32)
+                                centerVertically()
+                                centerHorizontally()
+                            }
+
                             onClick {
                                 try {
                                     TransitionManager.beginDelayedTransition(mainLayout,
@@ -133,22 +158,59 @@ class AuthActivity : _Activity() {
                                     async(kotlinx.coroutines.experimental.android.UI){
                                         delay(500)
                                         socialButtons.visibility = View.GONE
-                                        loginBtn.visibility = View.GONE
+                                        //loginBtn.visibility = View.GONE
+                                        progress.visibility = View.VISIBLE
+                                        loginText.visibility = View.GONE
                                     }
+
+                                    fun setToDefault() {
+                                        val params = loginBtn.layoutParams as RelativeLayout.LayoutParams
+
+                                        params.alignParentStart()
+                                        params.width = wrapContent
+                                        params.height = wrapContent
+
+                                        loginBtn.layoutParams = params
+
+                                        val socialParams = socialButtons.layoutParams as RelativeLayout.LayoutParams
+
+
+                                        socialParams.rightOf(loginBtn)
+                                        socialParams.width = matchParent
+                                        socialParams.height = wrapContent
+
+                                        socialButtons.layoutParams = socialParams
+
+                                        socialButtons.visibility = View.VISIBLE
+                                        //loginBtn.visibility = View.GONE
+                                        progress.visibility = View.GONE
+                                        loginText.visibility = View.VISIBLE
+                                    }
+
+                                    if (!isValidEmail(email.text.toString())){
+                                        emailInput.error = "Email is not valid!"
+                                        setToDefault()
+                                        return@onClick
+                                    }
+
+                                    if (password.text.toString().length < 6){
+                                        passwordInput.error = "Password should be at least 6 characters"
+                                        setToDefault()
+                                        return@onClick
+                                    }
+
+                                    if (password.text.toString().length > 17){
+                                        passwordInput.error = "Password should be max 16 characters"
+                                        setToDefault()
+                                        return@onClick
+                                    }
+                                    // TODO: IMPORT FIREBASE AUTH MODULE
+                                    // If success
+                                    startActivity(intentFor<MainActivity>())
                                 } catch (e: Exception){
                                     wtf("Animation Error", e)
                                 }
 
-                            }
-                            textView("Login"){
-                                textColor = resources.getColor(R.color.light_blue)
-                            }.lparams {
-                                topMargin = dip(5)
-                                bottomMargin = dip(5)
-                                leftMargin = dip(32)
-                                rightMargin = dip(32)
-                                centerVertically()
-                                centerHorizontally()
                             }
                         }.lparams {
                             leftMargin = dip(16)
